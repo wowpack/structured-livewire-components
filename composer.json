@@ -1,0 +1,24 @@
+{
+    "name": "wowpack/structured-livewire-components",
+    "description": "Structure livewire components in a more organized way.",
+    "type": "library",
+    "require": {
+        "php": "^8.0",
+        "livewire/livewire": "^3.0",
+        "laravel/laravel": "^10.0|^11.0|^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Wowpack\\StructuredLivewire\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Wowpack\\StructuredLivewire\\StructuredLivewireServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "license": "MIT"
+}
