@@ -15,7 +15,7 @@ class MakeComponentCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'make:structured-livewire 
+    protected $signature = 'structured-livewire:component 
                            {name? : The name of the component}
                            {--group= : The group to create the component in}
                            {--force : Overwrite existing component}
