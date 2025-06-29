@@ -18,18 +18,18 @@ class StructuredLivewireServiceProvider extends ServiceProvider
 {
     private const CACHE_PREFIX = 'structured-livewire';
     private const CACHE_TTL = 3600; // 1 hour
-    
+
     /**
      * Get the root path for Livewire components
      */
     private function getRootPath(): string
     {
         $directory = config('structured-livewire.livewire-components-directory');
-        
+
         if (empty($directory)) {
             throw new \InvalidArgumentException('Livewire components directory not configured');
         }
-        
+
         return Str::of($directory)->rtrim('/')->append('/')->toString();
     }
 
@@ -57,14 +57,14 @@ class StructuredLivewireServiceProvider extends ServiceProvider
     private function getFiles(?string $directory = null): Collection
     {
         $cacheKey = $this->getCacheKey('files', $directory);
-        
+
         if ($this->shouldUseCache() && Cache::has($cacheKey)) {
             return Cache::get($cacheKey);
         }
-        
+
         try {
             $path = $this->getPath($directory);
-            
+
             if (!File::isDirectory(rtrim($path, '/'))) {
                 Log::warning("Structured Livewire: Directory does not exist: {$path}");
                 return collect();
@@ -77,13 +77,12 @@ class StructuredLivewireServiceProvider extends ServiceProvider
                 ->filter(fn($file) => $this->isValidPhpFile($file))
                 ->map(fn(string $value) => $this->getFileInfo($value, $directory))
                 ->filter(fn($info) => $this->isValidLivewireComponent($info['class_name']));
-                
+
             if ($this->shouldUseCache()) {
                 Cache::put($cacheKey, $result, self::CACHE_TTL);
             }
-            
+
             return $result;
-            
         } catch (\Throwable $e) {
             Log::error("Structured Livewire: Error scanning directory {$directory}: " . $e->getMessage());
             return collect();
@@ -148,7 +147,7 @@ class StructuredLivewireServiceProvider extends ServiceProvider
     private function registerComponents(?string $location = null, ?string $suffix = null): void
     {
         $components = $this->getFiles($location);
-        
+
         if ($components->isEmpty()) {
             Log::info("Structured Livewire: No components found in location: " . ($location ?? 'root'));
             return;
@@ -160,17 +159,16 @@ class StructuredLivewireServiceProvider extends ServiceProvider
         $components->each(function (array $data) use ($suffix, &$registered, &$failed) {
             try {
                 $tag = $data['tag'] . (!empty($suffix) ? '-' . $suffix : '');
-                
+
                 if (Livewire::hasComponent($tag)) {
                     Log::warning("Structured Livewire: Component '{$tag}' already registered, skipping");
                     return;
                 }
-                
+
                 Livewire::component($tag, $data['class_name']);
                 $registered++;
-                
+
                 Log::debug("Structured Livewire: Registered component '{$tag}' -> {$data['class_name']}");
-                
             } catch (\Throwable $e) {
                 $failed++;
                 Log::error("Structured Livewire: Failed to register component {$data['class_name']}: " . $e->getMessage());
@@ -185,9 +183,9 @@ class StructuredLivewireServiceProvider extends ServiceProvider
      */
     private function isValidPhpFile(string $path): bool
     {
-        return File::exists($path) && 
-               Str::endsWith($path, '.php') && 
-               File::isReadable($path);
+        return File::exists($path) &&
+            Str::endsWith($path, '.php') &&
+            File::isReadable($path);
     }
 
     /**
@@ -199,13 +197,12 @@ class StructuredLivewireServiceProvider extends ServiceProvider
             if (!class_exists($className)) {
                 return false;
             }
-            
+
             $reflection = new ReflectionClass($className);
-            
-            return $reflection->isSubclassOf(Component::class) && 
-                   !$reflection->isAbstract() && 
-                   $reflection->isInstantiable();
-                   
+
+            return $reflection->isSubclassOf(Component::class) &&
+                !$reflection->isAbstract() &&
+                $reflection->isInstantiable();
         } catch (ReflectionException $e) {
             Log::debug("Structured Livewire: Invalid component class {$className}: " . $e->getMessage());
             return false;
@@ -238,11 +235,11 @@ class StructuredLivewireServiceProvider extends ServiceProvider
     public function clearCache(): void
     {
         $keys = Cache::get(self::CACHE_PREFIX . '-keys', []);
-        
+
         foreach ($keys as $key) {
             Cache::forget($key);
         }
-        
+
         Cache::forget(self::CACHE_PREFIX . '-keys');
         Log::info('Structured Livewire: Cache cleared');
     }
@@ -253,15 +250,15 @@ class StructuredLivewireServiceProvider extends ServiceProvider
     private function validateConfig(): void
     {
         $config = config('structured-livewire');
-        
+
         if (empty($config['livewire-components-directory'])) {
             throw new \InvalidArgumentException('structured-livewire.livewire-components-directory must be configured');
         }
-        
+
         if (!is_array($config['groups'] ?? [])) {
             throw new \InvalidArgumentException('structured-livewire.groups must be an array');
         }
-        
+
         foreach ($config['groups'] as $index => $group) {
             if (!is_array($group) || !isset($group['location'])) {
                 throw new \InvalidArgumentException("structured-livewire.groups.{$index} must have a 'location' key");
@@ -278,31 +275,6 @@ class StructuredLivewireServiceProvider extends ServiceProvider
             __DIR__ . '/../config/structured-livewire.php',
             'structured-livewire'
         );
-
-        try {
-            $this->validateConfig();
-            
-            $groups = Config::get('structured-livewire.groups', []);
-
-            if (empty($groups)) {
-                Log::info('Structured Livewire: No groups configured, registering components from root directory');
-                $this->registerComponents();
-            } else {
-                foreach ($groups as $group) {
-                    $this->registerComponents(
-                        $group['location'] ?? null, 
-                        $group['suffix'] ?? null
-                    );
-                }
-            }
-            
-        } catch (\Throwable $e) {
-            Log::error('Structured Livewire: Registration failed: ' . $e->getMessage());
-            
-            if (!app()->environment('production')) {
-                throw $e;
-            }
-        }
     }
 
     /**
@@ -320,6 +292,30 @@ class StructuredLivewireServiceProvider extends ServiceProvider
                 MakeComponentCommand::class,
                 ClearCacheCommand::class,
             ]);
+        }
+
+        try {
+            $this->validateConfig();
+
+            $groups = Config::get('structured-livewire.groups', []);
+
+            if (empty($groups)) {
+                Log::info('Structured Livewire: No groups configured, registering components from root directory');
+                $this->registerComponents();
+            } else {
+                foreach ($groups as $group) {
+                    $this->registerComponents(
+                        $group['location'] ?? null,
+                        $group['suffix'] ?? null
+                    );
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error('Structured Livewire: Registration failed: ' . $e->getMessage());
+
+            if (!app()->environment('production')) {
+                throw $e;
+            }
         }
     }
 }
